@@ -88,4 +88,11 @@ exports.deleteTask = async (req, res) => {
   } catch (err) {
     res.status(500).json("Server Error");
   }
+  module.exports = {
+  getAllTasks,
+  createTask,
+  updateTask,
+  deleteTask
+};
+
 };
