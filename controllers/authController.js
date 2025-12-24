@@ -2,7 +2,9 @@ const pool = require("../db");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 
-/* REGISTER */
+/* =====================
+   REGISTER
+===================== */
 exports.register = async (req, res) => {
   try {
     const { name, email, password } = req.body;
@@ -23,13 +25,20 @@ exports.register = async (req, res) => {
       [name, email, hashedPassword]
     );
 
-    res.json(newUser.rows[0]);
+    res.json({
+      id: newUser.rows[0].id,
+      name: newUser.rows[0].name,
+      email: newUser.rows[0].email
+    });
   } catch (err) {
+    console.error(err.message);
     res.status(500).json("Server error");
   }
 };
 
-/* LOGIN */
+/* =====================
+   LOGIN
+===================== */
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -50,8 +59,11 @@ exports.login = async (req, res) => {
     }
 
     const token = jwt.sign(
-      { id: user.rows[0].id, email: user.rows[0].email },
-      "jwtSecretKey",
+      {
+        id: user.rows[0].id,
+        email: user.rows[0].email
+      },
+      process.env.JWT_SECRET,   // ✅ FIXED
       { expiresIn: "1h" }
     );
 
@@ -64,6 +76,7 @@ exports.login = async (req, res) => {
       }
     });
   } catch (err) {
+    console.error(err.message);
     res.status(500).json("Server error");
   }
 };
