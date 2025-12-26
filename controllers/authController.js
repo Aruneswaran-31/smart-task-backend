@@ -3,18 +3,18 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 
 /* =====================
-   REGISTER
+   REGISTER + AUTO LOGIN
 ===================== */
 exports.register = async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
-    const user = await pool.query(
+    const userCheck = await pool.query(
       "SELECT * FROM users WHERE email=$1",
       [email]
     );
 
-    if (user.rows.length > 0) {
+    if (userCheck.rows.length > 0) {
       return res.status(400).json("User already exists");
     }
 
@@ -25,11 +25,26 @@ exports.register = async (req, res) => {
       [name, email, hashedPassword]
     );
 
+    // ✅ CREATE TOKEN (SAME AS LOGIN)
+    const token = jwt.sign(
+      {
+        id: newUser.rows[0].id,
+        email: newUser.rows[0].email
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: "1h" }
+    );
+
+    // ✅ SEND TOKEN + USER (AUTO LOGIN)
     res.json({
-      id: newUser.rows[0].id,
-      name: newUser.rows[0].name,
-      email: newUser.rows[0].email
+      token,
+      user: {
+        id: newUser.rows[0].id,
+        name: newUser.rows[0].name,
+        email: newUser.rows[0].email
+      }
     });
+
   } catch (err) {
     console.error(err.message);
     res.status(500).json("Server error");
@@ -37,7 +52,7 @@ exports.register = async (req, res) => {
 };
 
 /* =====================
-   LOGIN
+   LOGIN (NO CHANGE)
 ===================== */
 exports.login = async (req, res) => {
   try {
@@ -59,10 +74,10 @@ exports.login = async (req, res) => {
     }
 
     const token = jwt.sign(
-  { id: user.rows[0].id, email: user.rows[0].email },
-  process.env.JWT_SECRET,
-  { expiresIn: "1h" }
-);
+      { id: user.rows[0].id, email: user.rows[0].email },
+      process.env.JWT_SECRET,
+      { expiresIn: "1h" }
+    );
 
     res.json({
       token,
