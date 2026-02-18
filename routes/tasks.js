@@ -1,13 +1,7 @@
-const express = require("express");
-const router = express.Router();
-const auth = require("../middleware/auth");
-const taskController = require("../controllers/taskController");
+const router = require("express").Router();
+const { register, login } = require("../controllers/authController");
 
-
-// 🔐 USER-SPECIFIC TASK ROUTES
-router.get("/", auth, taskController.getAllTasks);
-router.post("/", auth, taskController.createTask);
-router.put("/:id", auth, taskController.updateTask);
-router.delete("/:id", auth, taskController.deleteTask);
+router.post("/register", register);
+router.post("/login", login);
 
 module.exports = router;

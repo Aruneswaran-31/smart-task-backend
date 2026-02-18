@@ -2,19 +2,17 @@ const pool = require("../db");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 
-/* =====================
-   REGISTER
-===================== */
+/* REGISTER + AUTO LOGIN */
 exports.register = async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
-    const user = await pool.query(
+    const userExists = await pool.query(
       "SELECT * FROM users WHERE email=$1",
       [email]
     );
 
-    if (user.rows.length > 0) {
+    if (userExists.rows.length > 0) {
       return res.status(400).json("User already exists");
     }
 
@@ -25,20 +23,31 @@ exports.register = async (req, res) => {
       [name, email, hashedPassword]
     );
 
+    const token = jwt.sign(
+      {
+        id: newUser.rows[0].id,
+        email: newUser.rows[0].email,
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: "1h" }
+    );
+
     res.json({
-      id: newUser.rows[0].id,
-      name: newUser.rows[0].name,
-      email: newUser.rows[0].email
+      token,
+      user: {
+        id: newUser.rows[0].id,
+        name: newUser.rows[0].name,
+        email: newUser.rows[0].email,
+      },
     });
+
   } catch (err) {
-    console.error(err.message);
+    console.error(err);
     res.status(500).json("Server error");
   }
 };
 
-/* =====================
-   LOGIN
-===================== */
+/* LOGIN */
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -59,21 +68,25 @@ exports.login = async (req, res) => {
     }
 
     const token = jwt.sign(
-  { id: user.rows[0].id, email: user.rows[0].email },
-  process.env.JWT_SECRET,
-  { expiresIn: "1h" }
-);
+      {
+        id: user.rows[0].id,
+        email: user.rows[0].email,
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: "1h" }
+    );
 
     res.json({
       token,
       user: {
         id: user.rows[0].id,
         name: user.rows[0].name,
-        email: user.rows[0].email
-      }
+        email: user.rows[0].email,
+      },
     });
+
   } catch (err) {
-    console.error(err.message);
+    console.error(err);
     res.status(500).json("Server error");
   }
 };

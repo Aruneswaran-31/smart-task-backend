@@ -1,98 +1,68 @@
 const pool = require("../db");
 
-/* =========================
-   GET tasks (ONLY LOGGED USER)
-========================= */
-exports.getAllTasks = async (req, res) => {
+/* GET TASKS */
+exports.getTasks = async (req, res) => {
   try {
-    const userId = req.user.id;
-
-    const result = await pool.query(
-      "SELECT * FROM tasks WHERE user_id = $1 ORDER BY id DESC",
-      [userId]
+    const tasks = await pool.query(
+      "SELECT * FROM tasks WHERE user_id=$1 ORDER BY id DESC",
+      [req.user.id]
     );
 
-    res.json(result.rows);
+    res.json(tasks.rows);
   } catch (err) {
-    res.status(500).json("Server Error");
+    console.error(err);
+    res.status(500).json("Server error");
   }
 };
 
-/* =========================
-   CREATE task (ONLY LOGGED USER)
-========================= */
-exports.createTask = async (req, res) => {
+/* ADD TASK */
+exports.addTask = async (req, res) => {
   try {
-    const userId = req.user.id;
-    const { title, description, priority, status, due_date } = req.body;
+    const { title, description, priority, due_date } = req.body;
 
     const newTask = await pool.query(
-      `INSERT INTO tasks 
-       (title, description, priority, status, due_date, user_id)
-       VALUES ($1,$2,$3,$4,$5,$6)
-       RETURNING *`,
-      [title, description, priority, status, due_date || null, userId]
+      "INSERT INTO tasks (title, description, priority, due_date, status, user_id) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *",
+      [title, description, priority, due_date, "Pending", req.user.id]
     );
 
-    res.status(201).json(newTask.rows[0]);
+    res.json(newTask.rows[0]);
   } catch (err) {
-    res.status(500).json("Server Error");
+    console.error(err);
+    res.status(500).json("Server error");
   }
 };
 
-/* =========================
-   UPDATE task (OWNER ONLY)
-========================= */
+/* UPDATE TASK */
 exports.updateTask = async (req, res) => {
   try {
-    const userId = req.user.id;
     const { id } = req.params;
     const { status } = req.body;
 
-    const result = await pool.query(
-      `UPDATE tasks 
-       SET status = $1
-       WHERE id = $2 AND user_id = $3
-       RETURNING *`,
-      [status, id, userId]
+    await pool.query(
+      "UPDATE tasks SET status=$1 WHERE id=$2 AND user_id=$3",
+      [status, id, req.user.id]
     );
 
-    if (result.rows.length === 0) {
-      return res.status(403).json("Not authorized");
-    }
-
-    res.json(result.rows[0]);
+    res.json("Task updated");
   } catch (err) {
-    res.status(500).json("Server Error");
+    console.error(err);
+    res.status(500).json("Server error");
   }
 };
 
-/* =========================
-   DELETE task (OWNER ONLY)
-========================= */
+/* DELETE TASK */
 exports.deleteTask = async (req, res) => {
   try {
-    const userId = req.user.id;
     const { id } = req.params;
 
-    const result = await pool.query(
-      "DELETE FROM tasks WHERE id = $1 AND user_id = $2 RETURNING *",
-      [id, userId]
+    await pool.query(
+      "DELETE FROM tasks WHERE id=$1 AND user_id=$2",
+      [id, req.user.id]
     );
-
-    if (result.rows.length === 0) {
-      return res.status(403).json("Not authorized");
-    }
 
     res.json("Task deleted");
   } catch (err) {
-    res.status(500).json("Server Error");
+    console.error(err);
+    res.status(500).json("Server error");
   }
-  module.exports = {
-  getAllTasks,
-  createTask,
-  updateTask,
-  deleteTask
-};
-
 };
